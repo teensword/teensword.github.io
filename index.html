@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>白昼长度和太阳直射点纬度计算器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+        }
+        .container {
+            text-align: center;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        input[type="number"], input[type="date"] {
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 200px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+        .hint {
+            font-size: 0.9em;
+            color: #555;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>白昼长度和太阳直射点纬度计算器</h1>
+        <label for="latitude">纬度 (°):</label><br>
+        <span class="hint">南纬用负值</span><br>
+        <input type="number" id="latitude" step="any"><br>
+        <label for="datePicker">日期:</label><br>
+        <input type="date" id="datePicker"><br>
+        <button onclick="calculateDayLengthAndSunDeclination()">计算</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function calculateDayLengthAndSunDeclination() {
+            const latitudeInput = document.getElementById('latitude').value;
+            const dateInput = document.getElementById('datePicker').value;
+
+            if (!latitudeInput || !dateInput) {
+                alert('请输入纬度并选择一个日期');
+                return;
+            }
+
+            const latitude = parseFloat(latitudeInput);
+            const date = new Date(dateInput);
+            const dayOfYear = getDayOfYear(date);
+
+            // 计算太阳赤纬角（单位：弧度）
+            const declinationRad = 0.006918 - 0.399912 * Math.cos(dayOfYear * 0.017202) + 0.070257 * Math.sin(dayOfYear * 0.017202)
+                - 0.006758 * Math.cos(2 * dayOfYear * 0.017202) + 0.000907 * Math.sin(2 * dayOfYear * 0.017202)
+                - 0.002697 * Math.cos(3 * dayOfYear * 0.017202) + 0.001480 * Math.sin(3 * dayOfYear * 0.017202);
+
+            // 将太阳赤纬角转换为度数
+            let declinationDeg = declinationRad * (180 / Math.PI);
+
+            // 分离度和分
+            const declinationDegrees = Math.floor(Math.abs(declinationDeg));
+            const declinationMinutes = Math.round((Math.abs(declinationDeg) - declinationDegrees) * 60);
+
+            // 根据纬度值确定是南纬还是北纬
+            let declinationDirection = declinationDeg >= 0 ? '北纬' : '南纬';
+
+            // 将输入的纬度转换为弧度
+            const latRad = latitude * (Math.PI / 180);
+
+            // 计算余弦值
+            const cosSunrise = (-Math.tan(latRad) * Math.tan(declinationRad));
+
+            // 检查是否有日出或日落
+            if (cosSunrise > 1) {
+                document.getElementById('result').innerText = `太阳直射点纬度: ${declinationDirection} ${declinationDegrees}° ${declinationMinutes}'\n极夜`;
+            } else if (cosSunrise < -1) {
+                document.getElementById('result').innerText = `太阳直射点纬度: ${declinationDirection} ${declinationDegrees}° ${declinationMinutes}'\n极昼`;
+            } else {
+                // 计算日出和日落的时间差（小时）
+                const sunriseHourAngle = Math.acos(cosSunrise) * (180 / Math.PI);
+                let daylightHours = sunriseHourAngle * 2 / 15; // 15 degrees per hour
+
+                // 转换为小时和分钟
+                const hours = Math.floor(daylightHours);
+                const minutes = Math.round((daylightHours - hours) * 60);
+
+                document.getElementById('result').innerText = `太阳直射点纬度: ${declinationDirection} ${declinationDegrees}° ${declinationMinutes}'\n白昼长度: ${hours} 小时 ${minutes} 分钟`;
+            }
+        }
+
+        function getDayOfYear(date) {
+            const start = new Date(date.getFullYear(), 0, 0);
+            const diff = date - start;
+            const oneDay = 1000 * 60 * 60 * 24;
+            return Math.floor(diff / oneDay);
+        }
+    </script>
+</body>
+</html>
